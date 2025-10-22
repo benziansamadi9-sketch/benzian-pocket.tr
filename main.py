@@ -1,5 +1,5 @@
-# main.py
 import requests
+import random
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -11,60 +11,63 @@ class PocketApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
         
-        # Spinner لاختيار الزوج
         self.pair_spinner = Spinner(
-            text='USD/EUR',
-            values=('USD/EUR', 'EUR/USD', 'BTCUSDT', 'ETHUSDT', 'USD/JPY'),
+            text='BTCUSDT',
+            values=('BTCUSDT', 'ETHUSDT', 'EUR/USD', 'USD/JPY'),
             size_hint=(1, None),
             height='48dp'
         )
         self.layout.add_widget(self.pair_spinner)
 
-        # Label لعرض النتيجة
-        self.label = Label(text='اضغط تحديث أو انتظر التحديث التلقائي', font_size='20sp', halign='center')
-        self.layout.add_widget(self.label)
+        self.label_price = Label(text='السعر سيظهر هنا', font_size='20sp')
+        self.layout.add_widget(self.label_price)
 
-        # زر تحديث يدوي
-        btn = Button(text='تحديث التوقع / السعر', size_hint=(1, None), height='48dp')
-        btn.bind(on_press=self.update_price)
+        self.label_prediction = Label(text='توقع الاتجاه سيظهر هنا', font_size='20sp', color=(0,1,0,1))
+        self.layout.add_widget(self.label_prediction)
+
+        btn = Button(text='تحديث السعر والتوقع', size_hint=(1, None), height='48dp')
+        btn.bind(on_press=self.update_data)
         self.layout.add_widget(btn)
 
-        # تحديث تلقائي كل 30 ثانية (تقدر تغير المدة)
-        Clock.schedule_interval(self.update_price, 30)
+        Clock.schedule_interval(self.update_data, 30)
 
         return self.layout
 
-    def update_price(self, *args):
+    def update_data(self, *args):
         pair = self.pair_spinner.text.strip()
+        price = self.get_price(pair)
+        if price:
+            self.label_price.text = f'السعر الحالي لـ {pair}: {price:.6f}'
+            prediction = self.get_prediction(price)
+            self.label_prediction.text = f'🔮 التوقع: {prediction}'
+        else:
+            self.label_price.text = 'خطأ في جلب السعر.'
+            self.label_prediction.text = ''
+
+    def get_price(self, pair):
         try:
             if '/' in pair:
-                # زوج عملات كـ USD/EUR -> نستخدم exchangerate.host
                 base, target = pair.split('/')
                 url = f'https://api.exchangerate.host/convert?from={base}&to={target}'
                 r = requests.get(url, timeout=10)
                 data = r.json()
-                if data.get('success', False) or 'result' in data:
-                    rate = data.get('result')
-                    if rate is None:
-                        self.label.text = f'لم يتم الحصول على السعر لِ {pair}'
-                    else:
-                        self.label.text = f'السعر {pair} = {rate:.6f}'
-                else:
-                    self.label.text = f'خطأ في مصدر أسعار: {data}'
+                return data.get('result', None)
             else:
-                # رموز سوق (مثال BTCUSDT) -> نحاول Binance
-                symbol = pair.upper()
-                url = f'https://api.binance.com/api/v3/ticker/price?symbol={symbol}'
+                url = f'https://api.binance.com/api/v3/ticker/price?symbol={pair.upper()}'
                 r = requests.get(url, timeout=10)
                 if r.status_code == 200:
-                    data = r.json()
-                    price = float(data.get('price', 0))
-                    self.label.text = f'السعر {symbol} = {price:.6f}'
-                else:
-                    self.label.text = f'خطأ Binance: رمز غير معروف أو مشكلة (HTTP {r.status_code})'
-        except Exception as e:
-            # خطأ عام
-            self.label.text = f'حدث خطأ: {e}'
+                    return float(r.json()['price'])
+        except:
+            return None
+
+    def get_prediction(self, price):
+        """
+        نموذج توقع بسيط — مؤقت للتجربة
+        """
+        # نحاكي نموذج صغير يتوقع الصعود أو الهبوط بشكل عشوائي
+        change = random.choice(['⬆️ سيرتفع', '⬇️ سينخفض'])
+        confidence = random.uniform(60, 95)  # نسبة ثقة افتراضية
+        return f'{change} (ثقة {confidence:.1f}%)'
 
 if __name__ == "__main__":
     PocketApp().run()
