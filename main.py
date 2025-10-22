@@ -6,18 +6,21 @@ from kivy.uix.button import Button
 
 class PocketApp(App):
     def build(self):
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        layout = BoxLayout(orientation='vertical')
 
-        self.label = Label(text="توقع اليوم: جاري التحميل...", font_size='20sp')
-        btn = Button(text="تحديث التوقع", font_size='18sp', on_press=self.update_prediction)
+        self.label = Label(text="جاري التحميل...")
+        btn = Button(text="تحديث التوقع", font_size=24)
+
+        # 🔸 هذا السطر يربط الزر بالدالة
+        btn.bind(on_press=self.update_prediction)
 
         layout.add_widget(self.label)
         layout.add_widget(btn)
         return layout
 
     def update_prediction(self, instance):
-        # هنا لاحقًا سنضيف كود لجلب التوقع من موقع التداول
-        self.label.text = "توقع اليوم: صعود زوج EUR/USD 🔼"
+        # هنا تقدر تضيف الكود لجلب التوقع من موقع التداول لاحقًا
+        self.label.text = "توقع اليوم: صعود زوج EUR/USD 📈"
 
 if __name__ == "__main__":
     PocketApp().run()
